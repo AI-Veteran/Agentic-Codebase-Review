@@ -1,0 +1,5 @@
+{
+  "name": "Agentic Code Review",
+  "description": "A web application that simulates a multi-agent system for automated code analysis, using specialized AI agents who collaborate through a shared KV cache to produce a comprehensive report on code weaknesses and improvements.",
+  "requestFramePermissions": []
+}
