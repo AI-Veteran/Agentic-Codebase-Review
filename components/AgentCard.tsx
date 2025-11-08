@@ -1,7 +1,8 @@
 import React from 'react';
 import type { Agent } from '../types';
-import { AgentStatus } from '../types';
-import { ArchitectIcon, CpuIcon, DraftIcon, EditIcon, ReviseIcon, SecurityIcon, SupervisorIcon, CodeIcon, PackageIcon } from './Icons';
+import { AgentName, AgentStatus } from '../types';
+import { AGENT_METADATA } from '../constants';
+import { SupervisorIcon } from './Icons';
 
 interface AgentCardProps {
     agent: Agent;
@@ -14,22 +15,9 @@ const statusStyles: { [key in AgentStatus]: { bg: string; text: string; dot: str
     [AgentStatus.ERROR]: { bg: 'bg-red-900/50', text: 'text-red-300', dot: 'bg-red-400' },
 };
 
-const iconMap: { [key: string]: React.ElementType } = {
-    'Supervisor': SupervisorIcon,
-    'Architecture Analyst': ArchitectIcon,
-    'Security Sentinel': SecurityIcon,
-    'Efficiency Expert': CpuIcon,
-    'Maintainability Maestro': CodeIcon,
-    'Dependency Detective': PackageIcon,
-    'Drafting Agent': DraftIcon,
-    'Editing Agent': EditIcon,
-    'Revising Agent': ReviseIcon,
-};
-
-
 const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
     const styles = statusStyles[agent.status];
-    const Icon = iconMap[agent.name] || SupervisorIcon;
+    const Icon = AGENT_METADATA[agent.name]?.icon || SupervisorIcon;
 
     return (
         <div className={`flex items-start p-3 rounded-lg border border-gray-700 transition-all duration-300 ${styles.bg}`}>

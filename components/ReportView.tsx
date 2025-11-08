@@ -1,20 +1,12 @@
 import React from 'react';
-// Fix: Import AgentName as a value for use in the agentStyles object.
 import { AgentName } from '../types';
 import type { Report, Severity, Finding } from '../types';
-import { ArchitectIcon, SecurityIcon, CpuIcon, CodeIcon, PackageIcon, DownloadIcon } from './Icons';
+import { AGENT_METADATA } from '../constants';
+import { ArchitectIcon, DownloadIcon } from './Icons';
 
 interface ReportViewProps {
     report: Report;
 }
-
-const agentStyles: { [key in AgentName]?: { icon: React.ElementType, color: string, bg: string } } = {
-    [AgentName.ARCHITECTURE_ANALYST]: { icon: ArchitectIcon, color: 'text-purple-400', bg: 'bg-purple-900/20' },
-    [AgentName.SECURITY_SENTINEL]: { icon: SecurityIcon, color: 'text-red-400', bg: 'bg-red-900/20' },
-    [AgentName.EFFICIENCY_EXPERT]: { icon: CpuIcon, color: 'text-yellow-400', bg: 'bg-yellow-900/20' },
-    [AgentName.MAINTAINABILITY_MAESTRO]: { icon: CodeIcon, color: 'text-green-400', bg: 'bg-green-900/20' },
-    [AgentName.DEPENDENCY_DETECTIVE]: { icon: PackageIcon, color: 'text-orange-400', bg: 'bg-orange-900/20' },
-};
 
 const severityStyles: { [key in Severity]: string } = {
     'Low': 'border-gray-500 text-gray-300',
@@ -60,36 +52,52 @@ const FindingCard: React.FC<{ weakness: Finding }> = ({ weakness }) => {
     );
 };
 
-const generateMarkdownFromReport = (report: Report): string => {
-    let md = `# Code Review Report\n\n`;
-    md += `**Review ID:** \`${report.review_id}\`\n\n`;
-    md += `## Executive Summary\n\n${report.report.summary}\n\n---\n\n`;
-    
-    report.report.agentReports.forEach(agentReport => {
-        md += `## ${agentReport.agentName} Report\n\n`;
-        md += `### Summary\n\n${agentReport.report.summary}\n\n`;
-        md += `### Detailed Findings\n\n`;
-        agentReport.report.findings.forEach((finding, index) => {
-            md += `#### ${index + 1}. ${finding.title}\n\n`;
-            md += `- **Category:** ${finding.category}\n`;
-            md += `- **Severity:** ${finding.severity}\n\n`;
-            md += `**Description:**\n${finding.description}\n\n`;
-            md += `**Algorithmic Suggestion:**\n`;
-            md += `> ${finding.suggestion.replace(/\n/g, '\n> ')}\n\n`;
-            
-            if (finding.codeSpecificSuggestion) {
-                const { filePath, functionName, lineStart, lineEnd, suggestion } = finding.codeSpecificSuggestion;
-                md += `**Actionable Recommendation:**\n`;
-                md += `- **File:** \`${filePath}\`\n`;
-                md += `- **Function:** \`${functionName}\`\n`;
-                md += `- **Lines:** \`${lineStart}-${lineEnd}\`\n\n`;
-                md += `\`\`\`diff\n- (Existing Code)\n+ ${suggestion.replace(/\n/g, '\n+ ')}\n\`\`\`\n\n`;
-            }
-        });
-        md += `---\n\n`;
-    });
+const generateMarkdownFinding = (finding: Finding, index: number): string => {
+    let md = `#### ${index + 1}. ${finding.title}\n\n`;
+    md += `- **Category:** ${finding.category}\n`;
+    md += `- **Severity:** ${finding.severity}\n\n`;
+    md += `**Description:**\n${finding.description}\n\n`;
+    md += `**Algorithmic Suggestion:**\n`;
+    md += `> ${finding.suggestion.replace(/\n/g, '\n> ')}\n\n`;
 
+    if (finding.codeSpecificSuggestion) {
+        const { filePath, functionName, lineStart, lineEnd, suggestion } = finding.codeSpecificSuggestion;
+        md += `**Actionable Recommendation:**\n`;
+        md += `- **File:** \`${filePath}\`\n`;
+        md += `- **Function:** \`${functionName}\`\n`;
+        md += `- **Lines:** \`${lineStart}-${lineEnd}\`\n\n`;
+        md += `\`\`\`diff\n- (Existing Code)\n+ ${suggestion.replace(/\n/g, '\n+ ')}\n\`\`\`\n\n`;
+    }
     return md;
+}
+
+const generateMarkdownFromReport = (report: Report): string => {
+    const agentReportsMd = report.report.agentReports.map(agentReport => `
+## ${agentReport.agentName} Report
+
+### Summary
+
+${agentReport.report.summary}
+
+### Detailed Findings
+
+${agentReport.report.findings.map(generateMarkdownFinding).join('')}
+---
+`).join('\n');
+
+    return `
+# Code Review Report
+
+**Review ID:** \`${report.review_id}\`
+
+## Executive Summary
+
+${report.report.summary}
+
+---
+
+${agentReportsMd}
+    `.trim();
 };
 
 const ReportView: React.FC<ReportViewProps> = ({ report }) => {
@@ -127,7 +135,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
             <div className="space-y-8">
                 <h3 className="text-lg font-semibold text-white">Detailed Agent Reports</h3>
                 {report.report.agentReports.map(({ agentName, report: agentReportData }) => {
-                    const style = agentStyles[agentName] || {icon: ArchitectIcon, color: 'text-gray-400', bg: 'bg-gray-900/20' };
+                    const style = AGENT_METADATA[agentName] || {icon: ArchitectIcon, color: 'text-gray-400', bg: 'bg-gray-900/20' };
                     const Icon = style.icon;
                     return (
                         <div key={agentName} className={`border border-gray-700 rounded-lg p-5 ${style.bg}`}>

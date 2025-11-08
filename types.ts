@@ -52,6 +52,7 @@ export interface Finding {
 export type KVCacheDataType = 'ARCHITECTURE_MAP' | 'NOTE' | 'AGENT_REPORT';
 
 export interface BaseKVCacheEntry {
+    id: number;
     type: KVCacheDataType;
     agentName: AgentName;
 }
@@ -117,6 +118,7 @@ export interface HistoricalData {
 }
 
 export interface CICDLog {
+    id: number;
     message: string;
     status: 'pending' | 'success' | 'error';
 }

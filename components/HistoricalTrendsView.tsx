@@ -2,17 +2,16 @@ import React from 'react';
 import type { HistoricalData } from '../types';
 import { ArchitectIcon, SecurityIcon, CpuIcon, CodeIcon, PackageIcon } from './Icons';
 
+const MIN_Y_AXIS_SCALE = 10;
+const Y_AXIS_ROUNDING_FACTOR = 5;
+
 const getMaxValue = (data: HistoricalData[]): number => {
-    if (data.length === 0) return 10;
+    if (data.length === 0) return MIN_Y_AXIS_SCALE;
     let max = 0;
     data.forEach(d => {
-        if (d.architecture > max) max = d.architecture;
-        if (d.security > max) max = d.security;
-        if (d.efficiency > max) max = d.efficiency;
-        if (d.maintainability > max) max = d.maintainability;
-        if (d.dependency > max) max = d.dependency;
+        max = Math.max(max, d.architecture, d.security, d.efficiency, d.maintainability, d.dependency);
     });
-    return Math.max(10, Math.ceil(max / 5) * 5);
+    return Math.max(MIN_Y_AXIS_SCALE, Math.ceil(max / Y_AXIS_ROUNDING_FACTOR) * Y_AXIS_ROUNDING_FACTOR);
 };
 
 const LegendItem: React.FC<{ icon: React.ElementType, color: string, label: string }> = ({ icon: Icon, color, label }) => (

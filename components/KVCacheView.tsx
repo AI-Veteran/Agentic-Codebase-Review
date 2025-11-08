@@ -1,23 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import type { KVCacheEntry, ArchitectureMapEntry, NoteEntry, AgentReportEntry } from '../types';
 import { AgentName } from '../types';
-import { ArchitectIcon, SecurityIcon, CpuIcon, CodeIcon, PackageIcon, DraftIcon, EditIcon, ReviseIcon, SupervisorIcon, FolderIcon } from './Icons';
+import { AGENT_METADATA } from '../constants';
+import { SupervisorIcon, FolderIcon } from './Icons';
 
-const iconMap: { [key: string]: React.ElementType } = {
-    [AgentName.SUPERVISOR]: SupervisorIcon,
-    [AgentName.ARCHITECTURE_ANALYST]: ArchitectIcon,
-    [AgentName.SECURITY_SENTINEL]: SecurityIcon,
-    [AgentName.EFFICIENCY_EXPERT]: CpuIcon,
-    [AgentName.MAINTAINABILITY_MAESTRO]: CodeIcon,
-    [AgentName.DEPENDENCY_DETECTIVE]: PackageIcon,
-    [AgentName.DRAFTING_AGENT]: DraftIcon,
-    [AgentName.EDITING_AGENT]: EditIcon,
-    [AgentName.REVISING_AGENT]: ReviseIcon,
-};
-
-const ArchitectureMapView: React.FC<{ entry: ArchitectureMapEntry }> = ({ entry }) => {
+const ArchitectureMapView: React.FC<{ entry: ArchitectureMapEntry }> = memo(({ entry }) => {
     const [isOpen, setIsOpen] = useState(true);
-    const Icon = iconMap[entry.agentName];
+    const Icon = AGENT_METADATA[entry.agentName]?.icon || SupervisorIcon;
     return (
         <div className="bg-gray-800/60 rounded-lg p-3">
             <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center text-left">
@@ -43,10 +32,10 @@ const ArchitectureMapView: React.FC<{ entry: ArchitectureMapEntry }> = ({ entry 
             )}
         </div>
     );
-};
+});
 
-const NoteView: React.FC<{ entry: NoteEntry }> = ({ entry }) => {
-    const Icon = iconMap[entry.agentName];
+const NoteView: React.FC<{ entry: NoteEntry }> = memo(({ entry }) => {
+    const Icon = AGENT_METADATA[entry.agentName]?.icon || SupervisorIcon;
     return (
         <div className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-800/40">
             <Icon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -54,14 +43,14 @@ const NoteView: React.FC<{ entry: NoteEntry }> = ({ entry }) => {
                 <p className="text-gray-400">
                     <span className="font-semibold text-gray-300">{entry.agentName}</span> noted a <span className="font-semibold text-yellow-300">{entry.payload.severity}</span> issue in <span className="font-mono text-cyan-300">{entry.payload.filePath}</span>:
                 </p>
-                <p className="text-gray-300/80 pl-2 border-l-2 border-gray-700 mt-1 ml-1_5_ py-1">"{entry.payload.finding}"</p>
+                <p className="text-gray-300/80 pl-2 border-l-2 border-gray-700 mt-1 ml-1.5 py-1">"{entry.payload.finding}"</p>
             </div>
         </div>
     );
-};
+});
 
-const AgentReportView: React.FC<{ entry: AgentReportEntry }> = ({ entry }) => {
-    const Icon = iconMap[entry.agentName];
+const AgentReportView: React.FC<{ entry: AgentReportEntry }> = memo(({ entry }) => {
+    const Icon = AGENT_METADATA[entry.agentName]?.icon || SupervisorIcon;
     return (
          <div className="bg-gray-800/60 rounded-lg p-3">
             <div className="flex items-center gap-3">
@@ -73,8 +62,13 @@ const AgentReportView: React.FC<{ entry: AgentReportEntry }> = ({ entry }) => {
             </div>
          </div>
     );
-};
+});
 
+const entryComponentMap: { [key in KVCacheEntry['type']]: React.FC<{ entry: any }> } = {
+    'ARCHITECTURE_MAP': ArchitectureMapView,
+    'NOTE': NoteView,
+    'AGENT_REPORT': AgentReportView,
+};
 
 const KVCacheView: React.FC<{ entries: KVCacheEntry[] }> = ({ entries }) => {
     return (
@@ -84,17 +78,9 @@ const KVCacheView: React.FC<{ entries: KVCacheEntry[] }> = ({ entries }) => {
                 {entries.length === 0 ? (
                     <p className="text-gray-500 text-center py-4 text-sm">Cache is empty. Waiting for agents...</p>
                 ) : (
-                    entries.map((entry, index) => {
-                        switch (entry.type) {
-                            case 'ARCHITECTURE_MAP':
-                                return <ArchitectureMapView key={index} entry={entry} />;
-                            case 'NOTE':
-                                return <NoteView key={index} entry={entry} />;
-                            case 'AGENT_REPORT':
-                                return <AgentReportView key={index} entry={entry} />;
-                            default:
-                                return null;
-                        }
+                    entries.map((entry) => {
+                        const Component = entryComponentMap[entry.type];
+                        return Component ? <Component key={entry.id} entry={entry} /> : null;
                     })
                 )}
             </div>
