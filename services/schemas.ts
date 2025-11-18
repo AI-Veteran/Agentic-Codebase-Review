@@ -1,4 +1,6 @@
+
 import { Type } from "@google/genai";
+import { AnalysisCategory } from "../types";
 
 export const codeSpecificSuggestionSchema = {
     type: Type.OBJECT,
@@ -15,7 +17,11 @@ export const codeSpecificSuggestionSchema = {
 export const findingSchema = {
     type: Type.OBJECT,
     properties: {
-        category: { type: Type.STRING, enum: ['Architecture', 'Security', 'Efficiency', 'Maintainability', 'Dependency'], description: "The category of the weakness." },
+        category: { 
+            type: Type.STRING, 
+            enum: Object.values(AnalysisCategory), 
+            description: "The category of the weakness." 
+        },
         title: { type: Type.STRING, description: "A short, descriptive title for the weakness found." },
         description: { type: Type.STRING, description: "A detailed but concise explanation of the weakness." },
         severity: { type: Type.STRING, enum: ['Low', 'Medium', 'High', 'Critical'] },

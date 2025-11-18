@@ -6,6 +6,7 @@ export enum AgentName {
     EFFICIENCY_EXPERT = 'Efficiency Expert',
     MAINTAINABILITY_MAESTRO = 'Maintainability Maestro',
     DEPENDENCY_DETECTIVE = 'Dependency Detective',
+    UI_UX_ANALYST = 'UI/UX Analyst',
     DRAFTING_AGENT = 'Drafting Agent',
     EDITING_AGENT = 'Editing Agent',
     REVISING_AGENT = 'Revising Agent'
@@ -25,6 +26,15 @@ export enum Severity {
     CRITICAL = 'Critical'
 }
 
+export enum AnalysisCategory {
+    ARCHITECTURE = 'Architecture',
+    SECURITY = 'Security',
+    EFFICIENCY = 'Efficiency',
+    MAINTAINABILITY = 'Maintainability',
+    DEPENDENCY = 'Dependency',
+    UI_UX = 'UI/UX'
+}
+
 export interface Agent {
     name: AgentName;
     role: string;
@@ -41,7 +51,7 @@ export interface CodeSpecificSuggestion {
 }
 
 export interface Finding {
-    category: 'Architecture' | 'Security' | 'Efficiency' | 'Maintainability' | 'Dependency';
+    category: AnalysisCategory;
     title: string;
     description: string;
     severity: Severity;
@@ -115,6 +125,7 @@ export interface HistoricalData {
     efficiency: number;
     maintainability: number;
     dependency: number;
+    ui_ux: number;
 }
 
 export interface CICDLog {
@@ -122,3 +133,12 @@ export interface CICDLog {
     message: string;
     status: 'pending' | 'success' | 'error';
 }
+
+export type WorkflowEvent = 
+    | { type: 'AGENT_STATUS'; agentName: AgentName; status: AgentStatus; task?: string }
+    | { type: 'KV_UPDATE'; entry: Omit<KVCacheEntry, 'id'> }
+    | { type: 'LOG'; message: string; status: 'pending' | 'success' | 'error' }
+    | { type: 'LOG_UPDATE'; status: 'success' | 'error'; message?: string }
+    | { type: 'REPORT'; report: Report }
+    | { type: 'ERROR'; error: string }
+    | { type: 'STATUS'; status: ReviewStatus };

@@ -2,35 +2,32 @@ import React, { memo } from 'react';
 import type { CICDLog } from '../types';
 import { CheckCircleIcon, ClockIcon, XCircleIcon, LoadingSpinnerIcon } from './Icons';
 
-const iconMap: { [key in CICDLog['status']]: React.ReactElement } = {
-    pending: <ClockIcon className="h-5 w-5 text-blue-400" />,
-    success: <CheckCircleIcon className="h-5 w-5 text-green-400" />,
-    error: <XCircleIcon className="h-5 w-5 text-red-400" />,
+const LOG_STATUS_CONFIG: Record<CICDLog['status'], { icon: React.ReactElement, textColor: string }> = {
+    pending: { icon: <ClockIcon className="h-3 w-3 text-blue-400" />, textColor: 'text-blue-300' },
+    success: { icon: <CheckCircleIcon className="h-3 w-3 text-green-400" />, textColor: 'text-green-300' },
+    error: { icon: <XCircleIcon className="h-3 w-3 text-red-400" />, textColor: 'text-red-300' },
 };
 
-const textMap: { [key in CICDLog['status']]: string } = {
-    pending: 'text-blue-300',
-    success: 'text-green-300',
-    error: 'text-red-300',
-};
-
-const LogItem: React.FC<{ log: CICDLog }> = memo(({ log }) => (
-    <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-            {iconMap[log.status]}
+const LogItem: React.FC<{ log: CICDLog }> = memo(({ log }) => {
+    const config = LOG_STATUS_CONFIG[log.status];
+    return (
+        <div className="flex items-center gap-2">
+            <div className="flex-shrink-0 pt-0.5">
+                {config.icon}
+            </div>
+            <span className={`flex-grow text-[10px] ${config.textColor}`}>{log.message}</span>
+            {log.status === 'pending' && (
+               <LoadingSpinnerIcon className="animate-spin h-2.5 w-2.5 text-gray-500" />
+            )}
         </div>
-        <span className={`flex-grow ${textMap[log.status]}`}>{log.message}</span>
-        {log.status === 'pending' && (
-           <LoadingSpinnerIcon className="animate-spin h-4 w-4 text-gray-400" />
-        )}
-    </div>
-));
+    );
+});
 
 const ProcessLogView: React.FC<{ logs: CICDLog[] }> = ({ logs }) => {
     return (
-        <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4 text-cyan-300">Process Log</h2>
-            <div className="bg-gray-900/70 border border-gray-700 rounded-lg p-4 font-mono text-sm space-y-3">
+        <div className="mt-3">
+            <h2 className="text-sm font-semibold mb-1.5 text-cyan-300">Process Log</h2>
+            <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-2 font-mono space-y-1">
                 {logs.map((log) => (
                     <LogItem key={log.id} log={log} />
                 ))}

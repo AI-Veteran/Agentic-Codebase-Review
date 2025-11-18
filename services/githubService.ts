@@ -1,3 +1,4 @@
+
 import {
     GITHUB_API_BASE,
     MAX_FILES_TO_PROCESS,
@@ -6,13 +7,20 @@ import {
     FILE_PRIORITY_ORDER
 } from '../constants';
 
-// A simple base64 decoder
-const decodeBase64 = (str: string) => {
+const getAuthHeaders = () => {
+    const token = typeof process !== 'undefined' ? process.env.GITHUB_TOKEN : undefined;
+    return {
+        'Accept': 'application/vnd.github.v3+json',
+        ...(token ? { 'Authorization': `token ${token}` } : {})
+    };
+};
+
+const decodeBase64 = (str: string, filePath?: string) => {
     try {
         return atob(str);
     } catch (e) {
-        console.error("Failed to decode base64 string", e);
-        return "Error decoding content";
+        console.error(`Failed to decode base64 string for file: ${filePath || 'unknown'}`, e);
+        return `Error decoding content for ${filePath || 'unknown file'}`;
     }
 };
 
@@ -44,7 +52,7 @@ const parseRepoUrl = (url: string): { owner: string; repo: string } => {
 
 const fetchBranchSha = async (owner: string, repo: string, branch: string): Promise<string> => {
     const branchUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${branch}`;
-    const branchRes = await fetch(branchUrl);
+    const branchRes = await fetch(branchUrl, { headers: getAuthHeaders() });
     if (!branchRes.ok) {
         throw new Error(`Could not find branch '${branch}'. Status: ${branchRes.status}. Please check the repository URL and branch name.`);
     }
@@ -54,7 +62,7 @@ const fetchBranchSha = async (owner: string, repo: string, branch: string): Prom
 
 const fetchRecursiveTree = async (owner: string, repo: string, treeSha: string): Promise<GitHubTreeFile[]> => {
     const treeUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`;
-    const treeRes = await fetch(treeUrl);
+    const treeRes = await fetch(treeUrl, { headers: getAuthHeaders() });
     if (!treeRes.ok) {
         throw new Error(`Failed to fetch repository file tree. Status: ${treeRes.status}`);
     }
@@ -86,30 +94,40 @@ const filterAndSortFiles = (tree: GitHubTreeFile[]): GitHubTreeFile[] => {
         .slice(0, MAX_FILES_TO_PROCESS);
 };
 
-const fetchFileContents = async (owner: string, repo: string, branch: string, files: GitHubTreeFile[]): Promise<{ path: string; content: string }[]> => {
-    const filePromises = files.map(async file => {
-        const fileUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`;
-        try {
-            const fileRes = await fetch(fileUrl);
-            if (!fileRes.ok) {
-                console.warn(`Could not fetch content for ${file.path}`);
-                return null;
-            }
-            const fileData = await fileRes.json();
-            if (fileData.encoding !== 'base64') {
-                console.warn(`Skipping file with unexpected encoding '${fileData.encoding}': ${file.path}`);
-                return null;
-            }
-            const content = decodeBase64(fileData.content);
-            return { path: file.path, content };
-        } catch (error) {
-            console.error(`Error fetching file ${file.path}:`, error);
-            return null;
-        }
-    });
+const fetchFileContentsBatched = async (owner: string, repo: string, branch: string, files: GitHubTreeFile[]): Promise<{ path: string; content: string }[]> => {
+    const BATCH_SIZE = 5;
+    const results: { path: string; content: string }[] = [];
 
-    const settledFiles = await Promise.all(filePromises);
-    return settledFiles.filter((file): file is { path: string, content: string } => file !== null);
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        const batchPromises = batch.map(async file => {
+            const fileUrl = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`;
+            try {
+                const fileRes = await fetch(fileUrl, { headers: getAuthHeaders() });
+                if (!fileRes.ok) {
+                    console.warn(`Could not fetch content for ${file.path}`);
+                    return null;
+                }
+                const fileData = await fileRes.json();
+                if (fileData.encoding !== 'base64') {
+                    console.warn(`Skipping file with unexpected encoding '${fileData.encoding}': ${file.path}`);
+                    return null;
+                }
+                const content = decodeBase64(fileData.content, file.path);
+                return { path: file.path, content };
+            } catch (error) {
+                console.error(`Error fetching file ${file.path}:`, error);
+                return null;
+            }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        batchResults.forEach(res => {
+            if (res) results.push(res);
+        });
+    }
+    
+    return results;
 };
 
 const formatCodebaseContext = (fileContents: { path: string; content: string }[]): string => {
@@ -135,6 +153,6 @@ export const fetchRepoContents = async (repoUrl: string, branch: string): Promis
         throw new Error("No processable source code files found in the repository. Check the branch or repository content.");
     }
     
-    const fileContents = await fetchFileContents(owner, repo, branch, filesToFetch);
+    const fileContents = await fetchFileContentsBatched(owner, repo, branch, filesToFetch);
     return formatCodebaseContext(fileContents);
 };
